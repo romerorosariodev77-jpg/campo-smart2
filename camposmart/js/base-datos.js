@@ -3,6 +3,13 @@ let dbInstancia;
 const BASE_DATOS_DATOS = { id: "CampoSmartDB", version: 1 };
 
 function inicializarEstructuraCampoSmart() {
+    // NUEVO: Solicita a Android permiso para que la base de datos sea permanente y no se borre sola
+    if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().then(concedido => {
+            if (concedido) console.log("Almacenamiento persistente garantizado por Android.");
+        });
+    }
+
     return new Promise((resolver, rechazar) => {
         // Solicitud de apertura de la base de datos local en el navegador
         const peticionConexion = indexedDB.open(BASE_DATOS_DATOS.id, BASE_DATOS_DATOS.version);
