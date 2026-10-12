@@ -1,9 +1,8 @@
-// --- MOTOR TRANSACCIONAL INDEXEDDB DE CAMPOSMART (BASE-DATOS.JS) ---
 let dbInstancia;
 const BASE_DATOS_DATOS = { id: "CampoSmartDB", version: 1 };
 
 function inicializarEstructuraCampoSmart() {
-    // NUEVO: Solicita a Android permiso para que la base de datos sea permanente y no se borre sola
+    // Solicita a Android permiso para que la base de datos sea permanente y no se borre sola
     if (navigator.storage && navigator.storage.persist) {
         navigator.storage.persist().then(concedido => {
             if (concedido) console.log("Almacenamiento persistente garantizado por Android.");
@@ -85,14 +84,19 @@ function precargarCategoriasFundacionales() {
     });
 }
 
-// Sistema global de navegación ergonómica por pestañas móviles
-function rutearFocoModulo(moduloId) {
+// CORRECCIÓN: Se añade el parámetro 'e' para capturar el evento de forma segura en Android
+function rutearFocoModulo(moduloId, e) {
     document.querySelectorAll('.modulo-contenedor').forEach(m => m.classList.remove('active'));
     document.querySelectorAll('.tab-trigger').forEach(t => t.classList.remove('active'));
     
-    document.getElementById(moduloId).classList.add('active');
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.add('active');
+    const moduloObjetivo = document.getElementById(moduloId);
+    if (moduloObjetivo) {
+        moduloObjetivo.classList.add('active');
+    }
+    
+    // Usa el parámetro seguro del evento en vez de la variable global obsoleta
+    if (e && e.currentTarget) {
+        e.currentTarget.classList.add('active');
     }
 
     // Acciones automáticas al entrar en el módulo de categorías/dashboard
@@ -107,7 +111,6 @@ function arrancarAplicacionConSeguridad() {
     inicializarEstructuraCampoSmart()
         .then((db) => {
             console.log("Base de datos IndexedDB sincronizada con éxito en el celular.");
-            // Si tu función de carga del inventario ya existe, la ejecutamos aquí
             if (typeof cargarInventarioAutomatico === "function") {
                 cargarInventarioAutomatico();
             }
@@ -121,7 +124,7 @@ function arrancarAplicacionConSeguridad() {
 window.addEventListener("DOMContentLoaded", () => {
     arrancarAplicacionConSeguridad();
     
-    // Inyecta la fecha actual en los formularios para agilizar la carga en el campo
+    // CORRECCIÓN: Asegura el corte [0] para entregar un String de fecha limpio al input de Android
     const hoy = new Date().toISOString().split('T')[0];
     const camposFecha = ["san-fecha", "rep-fecha", "fin-fecha"];
     camposFecha.forEach(id => {
