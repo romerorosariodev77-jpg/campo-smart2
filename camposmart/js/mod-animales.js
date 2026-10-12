@@ -1,185 +1,74 @@
-// --- MÓDULO 1: LÓGICA OPERATIVA DE ANIMALES (MOD-ANIMALES.JS) ---
-
-// 1. CONTROLADOR DE REGISTRO / EDICIÓN TRANSACCIONAL SEGURO
-document.getElementById("form-animal").addEventListener("submit", function(e) {
-    e.preventDefault();
-    
-    // Captura defensiva de datos limpiando espacios
-    const caravana = document.getElementById("caravana").value.trim().toUpperCase();
-    const editId = document.getElementById("edit-id").value;
-    const archivoImagen = document.getElementById("foto-archivo").files[0];
-
-    // Estructuración del Payload con tipado correcto
-    const payloadAnimal = {
-        caravana: caravana,
-        categoria: document.getElementById("categoria-select").value,
-        peso: parseFloat(document.getElementById("peso").value) || 0,
-        madre: document.getElementById("madre").value.trim().toUpperCase(),
-        padre: document.getElementById("padre").value.trim().toUpperCase(),
-        nacimiento: document.getElementById("f-nacimiento").value,
-        paricion: document.getElementById("f-paricion").value,
-        observaciones: document.getElementById("observaciones").value.trim(),
-        fechaRegistro: new Date().toISOString()
-    };
-
-    // Procesamiento de imagen Offline-First (Conversión a Base64)
-    if (archivoImagen) {
-        const lector64 = new FileReader();
-        lector64.onload = function(evt) {
-            payloadAnimal.foto = evt.target.result; // Almacena el binario como texto en la base de datos
-            despacharPersistenciaAnimal(payloadAnimal, editId);
-        };
-        lector64.readAsDataURL(archivoImagen);
-    } else {
-        // Si estamos editando y no se subió una foto nueva, conservamos la que ya tenía
-        if (editId) {
-            const txBusqueda = dbInstancia.transaction("animales", "readonly");
-            txBusqueda.objectStore("animales").get(editId).onsuccess = (ev) => {
-                payloadAnimal.foto = ev.target.result ? ev.target.result.foto : null;
-                despacharPersistenciaAnimal(payloadAnimal, editId);
-            };
-        } else {
-            payloadAnimal.foto = null;
-            despacharPersistenciaAnimal(payloadAnimal, editId);
-        }
-    }
-});
-
-// 2. DESPACHADOR ATÓMICO EN BASE DE DATOS
-function despacharPersistenciaAnimal(datos, editId) {
-    const tx = dbInstancia.transaction("animales", "readwrite");
-    const store = tx.objectStore("animales");
-
-    if (!editId) {
-        // MODO ALTA: Verifica estrictamente si la clave primaria (Caravana) ya existe
-        const peticionChequeo = store.get(datos.caravana);
-        peticionChequeo.onsuccess = () => {
-            if (peticionChequeo.result) {
-                emitirNotificacionToast(`¡Bloqueado! La caravana ${datos.caravana} ya existe. Evita duplicados.`, "error");
-            } else {
-                store.put(datos).onsuccess = () => resolucionExitosaFormulario("Animal ingresado con éxito.");
-            }
-        };
-    } else {
-        // MODO EDICIÓN BLINDADA: Si cambió la caravana, borra el ID anterior e inserta el nuevo
-        if (editId !== datos.caravana) {
-            store.delete(editId);
-        }
-        store.put(datos).onsuccess = () => resolucionExitosaFormulario("Registro actualizado de forma segura.");
-    }
-}
-
-// 3. RESPUESTA VISUAL Y RESETEO
-function resolucionExitosaFormulario(msj) {
-    emitirNotificacionToast(msj, "exito");
-    abortarFlujoEdicionAnimal();
-    if (typeof ejecutarCalculosDashboardStock === "function") ejecutarCalculosDashboardStock();
-    if (typeof filtrarYMostrarAnimalesConHistorial === "function") filtrarYMostrarAnimalesConHistorial();
-}
-
-function abortarFlujoEdicionAnimal() {
-    document.getElementById("form-animal").reset();
-    document.getElementById("edit-id").value = "";
-    document.getElementById("caravana").disabled = false;
-    document.getElementById("btn-guardar-animal").innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Ficha';
-}
-
-// 4. EXPORTACIÓN LIMPIA A EXCEL (PURGA DEFENSIVA DE BASE64)
-function exportarLimpiamenteAExcel() {
-    const tx = dbInstancia.transaction("animales", "readonly");
-    const dataLimpiaDestino = [];
-
-    tx.objectStore("animales").openCursor().onsuccess = function(evt) {
-        const cursor = evt.target.result;
-        if (cursor) {
-            // Desestructuración avanzada: extraemos 'foto' y la desechamos para el reporte Excel
-            const { foto, ...restoCampos } = cursor.value;
-            dataLimpiaDestino.push(restoCampos);
-            cursor.continue();
-        } else {
-            if (dataLimpiaDestino.length === 0) {
-                emitirNotificacionToast("No se detectaron registros para exportar.", "error");
-                return;
-            }
-            
-            // Creación nativa del archivo Excel utilizando xlsx.js del lado del cliente
-            const estructuraHoja = XLSX.utils.json_to_sheet(dataLimpiaDestino);
-            const estructuraLibro = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(estructuraLibro, estructuraHoja, "Establecimiento Nelson");
-            
-            // Generación de descarga inmediata en PC o celular
-            XLSX.writeFile(estructuraLibro, `CampoSmart_Inventario_${new Date().toISOString().slice(0,10)}.xlsx`);
-            emitirNotificacionToast("Reporte Excel descargado correctamente.", "exito");
-        }
-    };
-}
-
-// 5. UTILIDAD REUTILIZABLE: COMPONENTE INTERNO TOAST PARA EL CAMPO
-function emitirNotificacionToast(texto, tipo) {
-    const toast = document.getElementById("global-toast");
-    toast.innerText = texto;
-    toast.style.backgroundColor = tipo === "error" ? "var(--rojo-operativo)" : "var(--verde-institucional)";
-    toast.style.color = "white";
-    toast.style.display = "block";
-    setTimeout(() => { toast.style.display = "none"; }, 4000);
-}
-// Función principal para listar, ordenar y renderizar los animales cargados
-function actualizarListaAnimalesVertical(listaDeAnimales) {
-    const contenedor = document.getElementById('contenedor-galeria-vertical');
-    if (!contenedor) return;
-
-    // Limpiar el contenedor antes de dibujar
-    contenedor.innerHTML = '';
-
-    if (!listaDeAnimales || listaDeAnimales.length === 0) {
-        contenedor.innerHTML = '<p style="text-align:center; color:#666;">No hay animales registrados aún.</p>';
+function cargarInventarioAutomatico() {
+    // 1. Validar que la base de datos de tu archivo base-datos.js esté conectada
+    if (!dbInstancia) {
+        console.error("La base de datos IndexedDB aún no está inicializada.");
         return;
     }
 
-    // ORDENAR: Ordena de menor a mayor basado en el número de caravana
-    const listaOrdenada = [...listaDeAnimales].sort((a, b) => {
-        const caravanaA = String(a.caravana || '').toLowerCase();
-        const caravanaB = String(b.caravana || '').toLowerCase();
-        return caravanaA.localeCompare(caravanaB, undefined, { numeric: true, sensitivity: 'base' });
-    });
+    // 2. Abrir una transacción de lectura blindada en tu almacén de "animales"
+    const transaccion = dbInstancia.transaction("animales", "readonly");
+    const almacen = transaccion.objectStore("animales");
+    const peticionLectura = almacen.getAll(); // Trae todas las cabezas guardadas
 
-    // Renderizar cada animal ordenado en la estructura vertical
-    listaOrdenada.forEach(animal => {
-        const tarjeta = document.createElement('div');
-        tarjeta.className = 'tarjeta-animal-horizontal';
+    peticionLectura.onsuccess = (evento) => {
+        const datosAnimales = evento.target.result;
+        const contenedor = document.getElementById('contenedor-galeria-vertical');
+        if (!contenedor) return;
 
-        // Validar si el animal tiene foto, de lo contrario colocar la imagen genérica
-        const rutaFoto = animal.foto ? animal.foto : 'camposmart/img/foto.png';
+        // Limpiar el contenedor desplegable antes de dibujar
+        contenedor.innerHTML = '';
 
-        tarjeta.innerHTML = `
-            <div class="contenedor-foto-lista" onclick="abrirVisorFoto('${rutaFoto}')">
-                <img src="${rutaFoto}" alt="Caravana ${animal.caravana}">
-            </div>
-            <div class="info-animal">
-                <span style="font-size: 1.1rem; font-weight: bold; color: #333;">Caravana: ${animal.caravana || 'S/N'}</span>
-                <span style="color: #666;"><strong>Categoría:</strong> ${animal.categoria || '--'}</span>
-                <span style="color: #666;"><strong>Peso:</strong> ${animal.peso || '--'} kg</span>
-                <span style="color: #666;"><strong>Detalles:</strong> ${animal.detalles || 'Sin observaciones'}</span>
-            </div>
-        `;
-        contenedor.appendChild(tarjeta);
-    });
-}
+        // Si el almacén está vacío, mostramos el mensaje elegante adaptado a tu diseño oscuro
+        if (!datosAnimales || datosAnimales.length === 0) {
+            contenedor.innerHTML = `
+                <div style="text-align:center; padding: 20px; color: #aaa; font-style: italic;">
+                    No hay animales registrados en esta estancia aún.
+                </div>
+            `;
+            return;
+        }
 
-// FUNCIONES PARA EL VISOR DE FOTOS GIGANTE
-function abrirVisorFoto(urlImagen) {
-    const modal = document.getElementById('mi-modal-visor');
-    const imagenGigante = document.getElementById('imagen-visor-gigante');
-    
-    if (modal && imagenGigante) {
-        imagenGigante.src = urlImagen;
-        modal.style.display = 'flex'; // Muestra la ventana sobre la app
-    }
-}
+        // 3. ORDENAR POR CARAVANA: Ordena de menor a mayor usando la clave primaria de tu base de datos
+        const listaOrdenada = [...datosAnimales].sort((a, b) => {
+            const caravanaA = String(a.caravana || '').toLowerCase();
+            const caravanaB = String(b.caravana || '').toLowerCase();
+            return caravanaA.localeCompare(caravanaB, undefined, { numeric: true, sensitivity: 'base' });
+        });
 
-function cerrarVisorFoto() {
-    const modal = document.getElementById('mi-modal-visor');
-    if (modal) {
-        modal.style.display = 'none'; // Oculta la ventana al tocar fuera o en la 'X'
-    }
+        // 4. DIBUJAR LAS TARJETAS VERTICALES CON EL ESTILO OSCURO DE TU APLICACIÓN
+        listaOrdenada.forEach(animal => {
+            const tarjeta = document.createElement('div');
+            tarjeta.className = 'tarjeta-animal-horizontal';
+            tarjeta.style.backgroundColor = '#1e1e1e';
+            tarjeta.style.border = '1px solid #333';
+            tarjeta.style.marginBottom = '10px';
+            tarjeta.style.borderRadius = '10px';
+            tarjeta.style.display = 'flex';
+            tarjeta.style.alignItems = 'center';
+            tarjeta.style.overflow = 'hidden';
+
+            // Usamos tu propiedad .foto; si no tiene, colocamos tu imagen por defecto de CampoSmart
+            const rutaFoto = animal.foto ? animal.foto : 'camposmart/img/foto.png';
+            
+            tarjeta.innerHTML = `
+                <div class="contenedor-foto-lista" onclick="abrirVisorFoto('${rutaFoto}')" style="width: 100px; height: 100px; flex-shrink: 0; cursor: pointer;">
+                    <img src="${rutaFoto}" alt="Caravana ${animal.caravana}" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <div class="info-animal" style="color: #fff; padding: 10px; display: flex; flex-direction: column; gap: 4px; font-family: sans-serif;">
+                    <span style="font-size: 1.1rem; font-weight: bold; color: #22c55e;">Caravana: ${animal.caravana || 'S/N'}</span>
+                    <span style="color: #ccc;"><strong>Categoría:</strong> ${animal.categoria || 'Vaca'}</span>
+                    <span style="color: #ccc;"><strong>Peso:</strong> ${animal.peso || '--'} kg</span>
+                    <span style="color: #999; font-size: 0.85rem;"><strong>Detalles:</strong> ${animal.detalles || animal.observaciones || 'Sin observaciones'}</span>
+                </div>
+            `;
+            contenedor.appendChild(tarjeta);
+        });
+    };
+
+    peticionLectura.onerror = () => {
+        const contenedor = document.getElementById('contenedor-galeria-vertical');
+        if (contenedor) {
+            contenedor.innerHTML = '<div style="color:red; text-align:center; padding:10px;">Error al leer la base de datos IndexedDB.</div>';
+        }
+    };
 }
