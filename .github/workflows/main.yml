@@ -1,8 +1,9 @@
 name: Generar APK CampoSmart
 
 on:
+  workflow_dispatch: # Esto activa el botón para arrancar manualmente
   push:
-    branches: [ "principal" ] # Configurado exactamente para tu rama 'principal'
+    branches: [ "principal" ]
 
 jobs:
   build:
