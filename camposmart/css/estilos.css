@@ -375,3 +375,44 @@ input:focus, select:focus, textarea:focus {
     background-color: #ef4444 !important;
     color: white !important;
 }
+/* Estilo del contenedor desplegable */
+.desplegable-inventario {
+    background-color: #ffffff;
+    border: 2px solid #385723;
+    border-radius: 8px;
+    margin: 15px 0;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Estilo del botón (la barra que se toca) */
+.boton-desplegable {
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    background-color: #e2f0d9;
+    color: #385723;
+    cursor: pointer;
+    list-style: none; /* Quita la flecha fea por defecto de HTML */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Añade una flecha personalizada al botón */
+.boton-desplegable::after {
+    content: "▼";
+    font-size: 0.8rem;
+    transition: transform 0.2s ease;
+}
+
+/* Gira la flecha hacia arriba cuando el desplegable está abierto */
+.desplegable-inventario[open] .boton-desplegable::after {
+    transform: rotate(180deg);
+}
+
+/* Espaciado interno para la lista cuando se abre */
+.desplegable-inventario[open] .galeria-animales-vertical {
+    padding: 15px 10px;
+    background-color: #f9f9f9;
+}
