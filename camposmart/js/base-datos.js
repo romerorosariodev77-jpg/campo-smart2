@@ -96,8 +96,23 @@ function rutearFocoModulo(moduloId) {
 }
 
 // Inicialización de utilidades visuales de tiempo por defecto al cargar la app
+function arrancarAplicacionConSeguridad() {
+    inicializarEstructuraCampoSmart()
+        .then((db) => {
+            console.log("Base de datos IndexedDB sincronizada con éxito en el celular.");
+            // Si tu función de carga del inventario ya existe, la ejecutamos aquí
+            if (typeof cargarInventarioAutomatico === "function") {
+                cargarInventarioAutomatico();
+            }
+        })
+        .catch((error) => {
+            console.error("Fallo nativo al inicializar el contenedor de datos:", error);
+        });
+}
+
+// Escucha estándar de carga web
 window.addEventListener("DOMContentLoaded", () => {
-    inicializarEstructuraCampoSmart();
+    arrancarAplicacionConSeguridad();
     
     // Inyecta la fecha actual en los formularios para agilizar la carga en el campo
     const hoy = new Date().toISOString().split('T')[0];
@@ -107,3 +122,10 @@ window.addEventListener("DOMContentLoaded", () => {
         if(el) el.value = hoy;
     });
 });
+
+// RESPALDO NATIVO: Si corre en el celular, asegura el arranque cuando Capacitor esté listo
+document.addEventListener("deviceready", () => {
+    if (!dbInstancia) {
+        arrancarAplicacionConSeguridad();
+    }
+}, false);
