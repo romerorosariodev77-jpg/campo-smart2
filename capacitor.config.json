@@ -2,5 +2,8 @@
   "appId": "com.camposmart.app",
   "appName": "CampoSmart",
   "webDir": "camposmart",
-  "bundledWebRuntime": false
+  "server": {
+    "androidScheme": "http",
+    "hostname": "localhost"
+  }
 }
