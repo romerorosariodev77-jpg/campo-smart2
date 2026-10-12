@@ -123,3 +123,63 @@ function emitirNotificacionToast(texto, tipo) {
     toast.style.display = "block";
     setTimeout(() => { toast.style.display = "none"; }, 4000);
 }
+// Función principal para listar, ordenar y renderizar los animales cargados
+function actualizarListaAnimalesVertical(listaDeAnimales) {
+    const contenedor = document.getElementById('contenedor-galeria-vertical');
+    if (!contenedor) return;
+
+    // Limpiar el contenedor antes de dibujar
+    contenedor.innerHTML = '';
+
+    if (!listaDeAnimales || listaDeAnimales.length === 0) {
+        contenedor.innerHTML = '<p style="text-align:center; color:#666;">No hay animales registrados aún.</p>';
+        return;
+    }
+
+    // ORDENAR: Ordena de menor a mayor basado en el número de caravana
+    const listaOrdenada = [...listaDeAnimales].sort((a, b) => {
+        const caravanaA = String(a.caravana || '').toLowerCase();
+        const caravanaB = String(b.caravana || '').toLowerCase();
+        return caravanaA.localeCompare(caravanaB, undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+    // Renderizar cada animal ordenado en la estructura vertical
+    listaOrdenada.forEach(animal => {
+        const tarjeta = document.createElement('div');
+        tarjeta.className = 'tarjeta-animal-horizontal';
+
+        // Validar si el animal tiene foto, de lo contrario colocar la imagen genérica
+        const rutaFoto = animal.foto ? animal.foto : 'camposmart/img/foto.png';
+
+        tarjeta.innerHTML = `
+            <div class="contenedor-foto-lista" onclick="abrirVisorFoto('${rutaFoto}')">
+                <img src="${rutaFoto}" alt="Caravana ${animal.caravana}">
+            </div>
+            <div class="info-animal">
+                <span style="font-size: 1.1rem; font-weight: bold; color: #333;">Caravana: ${animal.caravana || 'S/N'}</span>
+                <span style="color: #666;"><strong>Categoría:</strong> ${animal.categoria || '--'}</span>
+                <span style="color: #666;"><strong>Peso:</strong> ${animal.peso || '--'} kg</span>
+                <span style="color: #666;"><strong>Detalles:</strong> ${animal.detalles || 'Sin observaciones'}</span>
+            </div>
+        `;
+        contenedor.appendChild(tarjeta);
+    });
+}
+
+// FUNCIONES PARA EL VISOR DE FOTOS GIGANTE
+function abrirVisorFoto(urlImagen) {
+    const modal = document.getElementById('mi-modal-visor');
+    const imagenGigante = document.getElementById('imagen-visor-gigante');
+    
+    if (modal && imagenGigante) {
+        imagenGigante.src = urlImagen;
+        modal.style.display = 'flex'; // Muestra la ventana sobre la app
+    }
+}
+
+function cerrarVisorFoto() {
+    const modal = document.getElementById('mi-modal-visor');
+    if (modal) {
+        modal.style.display = 'none'; // Oculta la ventana al tocar fuera o en la 'X'
+    }
+}
