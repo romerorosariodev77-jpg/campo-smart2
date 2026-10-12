@@ -112,7 +112,28 @@
                 <h2><i class="fa-solid fa-chart-simple"></i> Resumen Automatizado de Stock</h2>
                 <div id="dashboard-stock" class="grid-dashboard"></div>
             </div>
+            <!-- Sección de Inventario de Animales Desplegable -->
+            <section id="seccion-inventario-ganado" style="padding: 10px;">
+    
+            <details class="desplegable-inventario">
+             <!-- Este es el botón que el usuario toca para abrir/cerrar -->
+            <summary class="boton-desplegable">
+            Ver todos los animales registrados
+            </summary>
+        
+            <!-- El contenido de la lista vertical (se oculta y muestra automáticamente) -->
+            <div id="contenedor-galeria-vertical" class="galeria-animales-vertical">
+            <!-- Aquí se inyectarán los animales desde JavaScript -->
+                </div>
+            </details>
+    
+        </section>
 
+        <!-- Ventana Emergente para la Foto Grande (Mantener al final del body) -->
+        <div id="mi-modal-visor" class="modal-foto-grande" onclick="cerrarVisorFoto()">
+            <span class="btn-cerrar-modal" onclick="cerrarVisorFoto()">&times;</span>
+        <img id="imagen-visor-gigante" src="" alt="Visualización ampliada">
+            </div>
             <div class="card">
                 <h2><i class="fa-solid fa-magnifying-glass-chart"></i> Buscador Avanzado Estricto</h2>
                 <input type="text" id="input-busqueda" placeholder="Buscar por número de caravana..." oninput="filtrarYMostrarAnimalesConHistorial()">
