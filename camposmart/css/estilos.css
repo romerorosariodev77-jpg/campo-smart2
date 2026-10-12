@@ -416,3 +416,21 @@ input:focus, select:focus, textarea:focus {
     padding: 15px 10px;
     background-color: #f9f9f9;
 }
+/* Ventana emergente (Modal) para ver la foto gigante */
+.modal-foto-grande {
+    display: none !important; /* CORRECCIÓN: Fuerza a que se mantenga oculto al inicio */
+    position: fixed;
+    z-index: 9999;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    justify-content: center;
+    align-items: center;
+}
+/* Espaciado interno para la lista cuando se abre */
+.desplegable-inventario[open] .galeria-animales-vertical {
+    padding: 15px 10px;
+    background-color: transparent; /* CORRECCIÓN: Se adapta al fondo oscuro de tu app */
+}
