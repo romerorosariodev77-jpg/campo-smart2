@@ -34,7 +34,7 @@ jobs:
         fi
 
     - name: Generar Iconos Oficiales CampoSmart
-      run: npx capacitor-assets generate --android --icon
+      run: npx capacitor-assets generate --android --asset-path recursos
 
     - name: Sincronizar Web App
       run: npx cap sync android
